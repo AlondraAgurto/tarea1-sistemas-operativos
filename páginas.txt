@@ -1,0 +1,2 @@
+https://cppreference.com/
+https://man7.org/
