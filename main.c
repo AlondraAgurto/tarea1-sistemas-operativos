@@ -25,8 +25,22 @@ int main(int argc, char *argv[]){
             tiempo_ms = atoi(tiempo_str);
         }
 
-        char* dependencias= strtok(NULL, ":");
-        printf("ID: %s | Nombre: %s | Tiempo: %d | Dependencias: %s\n", id_actividad, nombre_actividad, tiempo_ms, dependencias);
+        char* dependencias_str = strtok(NULL, ":"); // formato: 1,2,3...
+
+        int dependencias[50];
+        int num_dependencias = 0;
+
+        // Validacioness
+        if (dependencias_str != NULL && dependencias_str[0] != '\n' && dependencias_str[0] != '\0') {
+            char* dep = strtok(dependencias_str, ","); // x ej nos quedamos con el formato:1,2,3... solo con el 1
+            while (dep != NULL) {
+                dependencias[num_dependencias] = atoi(dep); 
+                num_dependencias++;
+                dep = strtok(NULL, ","); // permite pasar al siguiente!
+            }
+        }
+
+        printf("ID: %s | Nombre: %s | Tiempo: %d | Num Dependencias: %d\n", id_actividad, nombre_actividad, tiempo_ms, num_dependencias);
     }
     
     // relleno xd
