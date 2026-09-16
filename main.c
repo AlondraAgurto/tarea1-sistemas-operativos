@@ -25,7 +25,15 @@ int main(int argc, char *argv[]){
 
         char* id_actividad = strtok(buffer, ":");
         char* nombre_actividad= strtok(NULL, ":");
-        char* tiempo_ms= strtok(NULL, ":");
+        char* tiempo_str= strtok(NULL, ":"); // porque es texto aún
+
+        int tiempo_ms;
+        if (tiempo_str == NULL || tiempo_str[0] == '\0') { // por si es null o 0
+            tiempo_ms = rand() % 4901 + 100;
+        } else {
+            tiempo_ms = atoi(tiempo_str);
+        }
+
         char* dependencias= strtok(NULL, ":");
         printf("ID: %s | Nombre: %s | Tiempo: %s | Dependencias: %s\n", id_actividad, nombre_actividad, tiempo_ms, dependencias);
     }
