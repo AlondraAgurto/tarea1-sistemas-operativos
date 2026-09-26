@@ -11,6 +11,7 @@ typedef struct {
     int tiempo_ms;
     char dependencias[50][50];
     int num_dependencias;
+    int estado; // 0 = pendiente, 1 = corriendo, 2 = terminado
 } Actividad;
 
 int main(int argc, char *argv[]){
