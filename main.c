@@ -31,7 +31,9 @@ int main(int argc, char *argv[]){
     char buffer[256]; // arreglo caracteres
 
     while (fgets(buffer, sizeof(buffer), archivo) != NULL) {
-        printf("Linea leida: %s", buffer);
+        buffer[strcspn(buffer, "\r\n")] = 0; // Elimina el salto de línea al final de la línea leída
+
+        printf("Linea leida: %s\n", buffer); // Muestra la línea leída para depuración
 
         char* id_actividad = strtok(buffer, ":");
         char* nombre_actividad= strtok(NULL, ":");
