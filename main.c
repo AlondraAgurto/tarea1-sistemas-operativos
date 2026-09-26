@@ -68,6 +68,7 @@ int main(int argc, char *argv[]){
         strcpy(lista_actividades[total_actividades].nombre, nombre_actividad); // Copia nombre a la estructura
         lista_actividades[total_actividades].tiempo_ms = tiempo_ms; // Asigna tiempo a la estructura
         lista_actividades[total_actividades].num_dependencias = num_dependencias; // Asigna número de dependencias a la estructura
+        lista_actividades[total_actividades].estado = 0; // Inicializa estado como pendiente
 
         // Copia dependencias a la estructura
         for (int i = 0; i < num_dependencias; i++) {
