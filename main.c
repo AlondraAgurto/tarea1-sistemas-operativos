@@ -3,6 +3,16 @@
 #include <string.h>
 #include <time.h>
 
+#define MAX_ACTIVIDADES 1000 // Soporta hasta 1000 actividades según la rúbrica
+
+typedef struct {
+    char id[50];
+    char nombre[100];
+    int tiempo_ms;
+    char dependencias[50][50];
+    int num_dependencias;
+} Actividad;
+
 int main(int argc, char *argv[]){
     //Por si ejecuta sin args
     if (argc < 2) {
