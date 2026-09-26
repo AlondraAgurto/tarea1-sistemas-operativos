@@ -3,6 +3,10 @@
 #include <string.h>
 #include <time.h>
 
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #define MAX_ACTIVIDADES 1000 // Soporta hasta 1000 actividades según la rúbrica
 
 typedef struct {
