@@ -1,8 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 int main(int argc, char *argv[]){
+    //Por si ejecuta sin args
+    if (argc < 2) {
+        printf("Uso: %s <archivo_plan.txt>\n", argv[0]);
+        return 1;
+    }
+    srand(time(NULL)); //semilla aleatoria
     // argv[1] toma el 1er argumento  al ejecutar programa:d
     // r para leer 
     // fopen para abrir
@@ -19,6 +26,7 @@ int main(int argc, char *argv[]){
         char* tiempo_str= strtok(NULL, ":"); // porque es texto aún
 
         int tiempo_ms;
+        
         if (tiempo_str == NULL || tiempo_str[0] == '\0') { // por si es null o 0
             tiempo_ms = rand() % 4901 + 100;
         } else {
@@ -27,16 +35,15 @@ int main(int argc, char *argv[]){
 
         char* dependencias_str = strtok(NULL, ":"); // formato: 1,2,3...
 
-        int dependencias[50];
+        char dependencias[50][50];
         int num_dependencias = 0;
 
-        // Validacioness
         if (dependencias_str != NULL && dependencias_str[0] != '\n' && dependencias_str[0] != '\0') {
-            char* dep = strtok(dependencias_str, ","); // x ej nos quedamos con el formato:1,2,3... solo con el 1
+            char* dep = strtok(dependencias_str, ","); 
             while (dep != NULL) {
-                dependencias[num_dependencias] = atoi(dep); 
+                strcpy(dependencias[num_dependencias], dep);
                 num_dependencias++;
-                dep = strtok(NULL, ","); // permite pasar al siguiente!
+                dep = strtok(NULL, ","); 
             }
         }
 
