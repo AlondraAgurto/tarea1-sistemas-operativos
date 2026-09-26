@@ -17,11 +17,16 @@ typedef struct {
 int main(int argc, char *argv[]){
     Actividad lista_actividades[MAX_ACTIVIDADES];
     int total_actividades = 0;
-    //Por si ejecuta sin args
-    if (argc < 2) {
-        printf("Uso: %s <archivo_plan.txt>\n", argv[0]);
-        return 1;
+    
+    // Verifica que se proporcionen los argumentos necesarios
+    if (argc < 3) { // Se espera al menos 2 argumentos: archivo de plan y K
+        printf("Uso: %s <archivo_plan.txt> <K>\n", argv[0]); // Muestra cómo usar el programa
+        return 1; // Salida con error si no se proporcionan los argumentos
     }
+    
+    int K = atoi(argv[2]); // Límite de concurrencia permitido
+    printf("Límite de concurrencia K = %d\n", K);
+
     srand(time(NULL)); //semilla aleatoria
     // argv[1] toma el 1er argumento  al ejecutar programa:d
     // r para leer 
