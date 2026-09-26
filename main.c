@@ -109,7 +109,7 @@ int main(int argc, char *argv[]){
             // Simula el trabajo de la actividad durmiendo el tiempo especificado
             usleep(lista_actividades[i].tiempo_ms * 1000);
 
-            printf("  [Hijo] Actividad %s finalizada.\n", lista_actividades[i].id); // Indica que la actividad ha finalizado
+            printf("  [Hijo] Actividad %s finalizada.\n𓆝 𓆟 𓆞 𓆝", lista_actividades[i].id); // Indica que la actividad ha finalizado
             exit(0); // El hijo termina su trabajo aquí para que no me deje cachos
         }
     }
