@@ -14,6 +14,8 @@ typedef struct {
 } Actividad;
 
 int main(int argc, char *argv[]){
+    Actividad lista_actividades[MAX_ACTIVIDADES];
+    int total_actividades = 0;
     //Por si ejecuta sin args
     if (argc < 2) {
         printf("Uso: %s <archivo_plan.txt>\n", argv[0]);
@@ -58,6 +60,18 @@ int main(int argc, char *argv[]){
         }
 
         printf("ID: %s | Nombre: %s | Tiempo: %d | Num Dependencias: %d\n", id_actividad, nombre_actividad, tiempo_ms, num_dependencias);
+        // Guardar actividad en la lista
+        strcpy(lista_actividades[total_actividades].id, id_actividad); // Copia ID a la estructura
+        strcpy(lista_actividades[total_actividades].nombre, nombre_actividad); // Copia nombre a la estructura
+        lista_actividades[total_actividades].tiempo_ms = tiempo_ms; // Asigna tiempo a la estructura
+        lista_actividades[total_actividades].num_dependencias = num_dependencias; // Asigna número de dependencias a la estructura
+
+        // Copia dependencias a la estructura
+        for (int i = 0; i < num_dependencias; i++) {
+            strcpy(lista_actividades[total_actividades].dependencias[i], dependencias[i]);
+        }
+
+        total_actividades++;
     }
     
     // relleno xd
