@@ -83,6 +83,40 @@ int main(int argc, char *argv[]){
         total_actividades++;
     }
     
+    printf("────୨ৎ────────\n");
+    printf("\n⡞⠳⣄⣀⣠⠞INICIANDO SIMULACION DE PROCESOS \n");
+
+    for (int i = 0; i < total_actividades; i++) { // Itera sobre todas las actividades
+        pid_t pid = fork(); // Creamos un proceso hijo
+
+        if (pid < 0) {
+            // Error al crear el fork
+            perror("Error en fork");
+            exit(1);
+        } 
+        else if (pid == 0) {
+            // Código del proceso hijo
+            printf("  [Hijo] Actividad %s (%s) iniciada (PID: %d). Durmiendo %d ms...\n", 
+                   lista_actividades[i].id, // Muestra el ID de la actividad
+                   lista_actividades[i].nombre, // Muestra el nombre de la actividad
+                   getpid(), 
+                   lista_actividades[i].tiempo_ms);// Muestra el tiempo de trabajo en milisegundos
+            
+            // Simula el trabajo de la actividad durmiendo el tiempo especificado
+            usleep(lista_actividades[i].tiempo_ms * 1000);
+
+            printf("  [Hijo] Actividad %s finalizada.\n", lista_actividades[i].id); // Indica que la actividad ha finalizado
+            exit(0); // El hijo termina su trabajo aquí para que no me deje cachos
+        }
+    }
+
+    // El padre espera a que terminen todos sus hijos creados
+    for (int i = 0; i < total_actividades; i++) {
+        wait(NULL);
+    }
+    
+    printf("⡞⠳⣄⣀⣠⠞SIMULACION FINALIZADA⡞⠳⣄⣀⣠⠞\n");
+
     // relleno xd
     fclose(archivo);
     return 0;
