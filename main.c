@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#define MAX_ACTIVIDADES 1000 // Soporta hasta 1000 actividades según la rúbrica
+#define MAX_ACTIVIDADES 10000 // Soporta hasta 1000 actividades según la rúbrica
 #define MAX_DEPENDENCIAS 50
 
 typedef struct {
@@ -93,8 +93,14 @@ void trim(char *cadena) { // Función para eliminar espacios al principio y al f
 }
 
 int main(int argc, char *argv[]){ // Función principal del programa, recibe los argumentos de línea de comandos
-    Actividad lista_actividades[MAX_ACTIVIDADES]; // Arreglo para almacenar las actividades leídas del archivo
+    int capacidad_actividades = 100; // Capacidad inicial
     int total_actividades = 0; // Contador de actividades leídas
+    Actividad *lista_actividades = malloc(capacidad_actividades * sizeof(Actividad)); // Asigna memoria dinámica para la lista de actividades
+
+    if (lista_actividades == NULL) {
+        perror("Error al asignar memoria inicial");
+        return 1;
+    }
     
     // Verifica que se proporcionen los argumentos necesarios
     if (argc < 3) { // Se espera al menos 2 argumentos: archivo de plan y K
@@ -156,11 +162,12 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
 
         printf("ID: %s | Nombre: %s | Tiempo: %d | Num Dependencias: %d\n", id_actividad, nombre_actividad, tiempo_ms, num_dependencias);
         // Guardar actividad en la lista
-        strcpy(lista_actividades[total_actividades].id, id_actividad); // Copia ID a la estructura
-        strcpy(lista_actividades[total_actividades].nombre, nombre_actividad); // Copia nombre a la estructura
-        lista_actividades[total_actividades].tiempo_ms = tiempo_ms; // Asigna tiempo a la estructura
-        lista_actividades[total_actividades].num_dependencias = num_dependencias; // Asigna número de dependencias a la estructura
-        lista_actividades[total_actividades].estado = 0; // Inicializa estado como pendiente
+        // Guardar actividad en la lista
+        strcpy(lista_actividades[total_actividades].id, id_actividad); 
+        strcpy(lista_actividades[total_actividades].nombre, nombre_actividad); 
+        lista_actividades[total_actividades].tiempo_ms = tiempo_ms; 
+        lista_actividades[total_actividades].num_dependencias = num_dependencias; 
+        lista_actividades[total_actividades].estado = 0; 
 
         // Copia dependencias a la estructura
         for (int i = 0; i < num_dependencias; i++) {
@@ -168,6 +175,19 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
         }
 
         total_actividades++;
+
+        // Por si el espacio x.x
+        if (total_actividades >= capacidad_actividades) { 
+            capacidad_actividades *= 2;
+            Actividad *temp = realloc(lista_actividades, capacidad_actividades * sizeof(Actividad)); 
+            if (temp == NULL) {
+                perror("Error al redimensionar memoria");
+                free(lista_actividades);
+                fclose(archivo);
+                return 1;
+            }
+            lista_actividades = temp;
+        }
     }
     
     printf("────୨ৎ────────\n");
