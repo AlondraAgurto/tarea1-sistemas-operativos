@@ -19,6 +19,7 @@ typedef struct {
     int num_dependencias;
     int estado; // 0 = pendiente, 1 = corriendo, 2 = terminado
     pid_t pid; // PID del proceso que ejecuta esta actividad
+    int pipe_fd[2];
 } Actividad;
 
 int buscar_actividad(Actividad lista[], int total, const char *id) { // Busca la actividad por ID y devuelve su índice, o -1 si no se encuentra
@@ -219,7 +220,12 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
             * dentro del límite de concurrencia.
             */
             printf("[DEBUG] Intentando crear proceso para actividad %s...\n", // Muestra un mensaje de depuración indicando que se intentará crear un proceso para la actividad
-            lista_actividades[i].id); // Muestra el ID de la actividad
+            lista_actividades[i].id);// Muestra el ID de la actividad
+
+            if (pipe(lista_actividades[i].pipe_fd) < 0) { // Crea un pipe para la actividad actual y verifica si hubo un error al crearlo
+                perror("Error al crear el pipe");
+                exit(1);
+            } 
             pid_t pid = fork();
 
             if (pid < 0) {
@@ -235,6 +241,7 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
                 * El hijo se encarga de simular la ejecución
                 * de la actividad.
                 */
+                close(lista_actividades[i].pipe_fd[0]); // Cierra el extremo de lectura del pipe en el proceso hijo
 
                 printf(
                     "  [Hijo] Actividad %s (%s) iniciada "
@@ -248,7 +255,13 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
                 // Simula el tiempo de ejecución de la actividad.
                 usleep(lista_actividades[i].tiempo_ms * 1000);
 
-                printf(
+                // Envía un mensaje al proceso padre indicando que la actividad ha terminado.
+                char mensaje[100]; // Buffer para el mensaje que se enviará al proceso padre
+                snprintf(mensaje, sizeof(mensaje), "Insumo de [%s] listo", lista_actividades[i].id); // Crea un mensaje indicando que la actividad ha terminado
+                write(lista_actividades[i].pipe_fd[1], mensaje, strlen(mensaje) + 1); // Escribe el mensaje en el pipe para que el proceso padre lo reciba
+                close(lista_actividades[i].pipe_fd[1]); // Cierra escritura
+
+                printf( //  Muestra un mensaje indicando que la actividad ha finalizadooo
                     "  [Hijo] Actividad %s finalizada "
                     "(PID: %d)\n",
                     lista_actividades[i].id,
@@ -267,6 +280,8 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
                 * Guarda el PID y actualiza el estado
                 * de la actividad.
                 */
+
+                close(lista_actividades[i].pipe_fd[1]); // Cierra el extremo de escritura del pipe en el proceso padre
 
                 lista_actividades[i].pid = pid;
                 lista_actividades[i].estado = 1;
@@ -310,14 +325,22 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
             */
             for (int i = 0; i < total_actividades; i++) {
 
-                if (lista_actividades[i].pid == pid_terminado) {
+                if (lista_actividades[i].pid == pid_terminado) { // Si encontramos la actividad correspondiente al PID que terminó, actualizamos su estado y contamos el número de procesos activos y actividades terminadas
 
-                    lista_actividades[i].estado = 2;
+                    lista_actividades[i].estado = 2; // Marcamos la actividad como terminada
 
-                    procesos_activos--;
-                    actividades_terminadas++;
+                    procesos_activos--;  // Decrementamos el contador de procesos activos
+                    actividades_terminadas++; // Incrementamos el contador de actividades terminadas
 
-                    printf(
+                    // Leemos el mensaje del pipe del hijo
+                    char buffer_pipe[100]; // Buffer para almacenar el mensaje recibido del proceso hijo
+                    ssize_t bytes_leidos = read(lista_actividades[i].pipe_fd[0], buffer_pipe, sizeof(buffer_pipe)); // Leemos el mensaje del pipe del hijo y almacenamos el número de bytes leídos
+                    if (bytes_leidos > 0) { // Si se leyeron bytes del pipe, mostramos el mensaje recibido
+                        printf("  [Padre] Mensaje recibido -> %s\n", buffer_pipe);
+                    }
+                    close(lista_actividades[i].pipe_fd[0]); // Cierra lectura
+
+                    printf( // Muestra un mensaje indicando que la actividad ha terminado y el número de procesos activos y actividades terminadas
                         "  [Padre] Actividad %s terminó. "
                         "Procesos activos: %d/%d\n",
                         lista_actividades[i].id,
