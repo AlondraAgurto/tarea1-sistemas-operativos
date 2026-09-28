@@ -21,57 +21,57 @@ typedef struct {
     pid_t pid; // PID del proceso que ejecuta esta actividad
 } Actividad;
 
-int buscar_actividad(Actividad lista[], int total, const char *id) {
+int buscar_actividad(Actividad lista[], int total, const char *id) { // Busca la actividad por ID y devuelve su índice, o -1 si no se encuentra
 
-    for (int i = 0; i < total; i++) {
+    for (int i = 0; i < total; i++) { // Itera sobre la lista de actividades
 
-        if (strcmp(lista[i].id, id) == 0) {
-            return i;
+        if (strcmp(lista[i].id, id) == 0) { // Compara el ID de la actividad actual con el ID buscado
+            return i; // Si encuentra la actividad, devuelve su índice
         }
     }
 
-    return -1;
+    return -1; // Si no encuentra la actividad, devuelve -1 (toma tu cosa horrorosa KSDKDS)
 }
 
-int dependencias_terminadas(Actividad lista[], int total, int indice) {
+int dependencias_terminadas(Actividad lista[], int total, int indice) { // Verifica si todas las dependencias de la actividad en el índice dado han terminado
 
-    Actividad *actual = &lista[indice];
+    Actividad *actual = &lista[indice]; // Obtiene un puntero a la actividad actual
 
-    printf("[DEBUG] Revisando actividad %s\n", actual->id);
+    printf("[DEBUG] Revisando actividad %s\n", actual->id); // Muestra un mensaje de depuración indicando que se está revisando la actividad actual
 
-    for (int i = 0; i < actual->num_dependencias; i++) {
+    for (int i = 0; i < actual->num_dependencias; i++) { // Itera sobre todas las dependencias de la actividad actual
 
-        printf("[DEBUG]   Dependencia requerida: %s\n",
-               actual->dependencias[i]);
+        printf("[DEBUG]   Dependencia requerida: %s\n", // Muestra un mensaje de depuración indicando la dependencia que se está revisando
+               actual->dependencias[i]); // Muestra un mensaje de depuración indicando la dependencia que se está revisando
 
-        int posicion = buscar_actividad(
+        int posicion = buscar_actividad( // Busca la posición de la dependencia en la lista de actividades
             lista,
             total,
             actual->dependencias[i]
         );
 
-        if (posicion == -1) {
+        if (posicion == -1) { // Si no encuentra la dependencia en la lista de actividades, muestra un mensaje de error y retorna 0 (falso)
             printf("[DEBUG]   ERROR: dependencia no encontrada\n");
             return 0;
         }
 
-        printf("[DEBUG]   Actividad encontrada: %s, estado = %d\n",
+        printf("[DEBUG]   Actividad encontrada: %s, estado = %d\n", // Muestra un mensaje de depuración indicando que se encontró la actividad de la dependencia y su estado
                lista[posicion].id,
                lista[posicion].estado);
 
-        if (lista[posicion].estado != 2) {
+        if (lista[posicion].estado != 2) { // Si la actividad de la dependencia no ha terminado (estado != 2), muestra un mensaje de depuración y retorna 0 (falso)
             printf("[DEBUG]   Dependencia todavía no terminada\n");
             return 0;
         }
     }
 
-    printf("[DEBUG] Todas las dependencias de %s terminaron\n",
+    printf("[DEBUG] Todas las dependencias de %s terminaron\n", // Muestra un mensaje de depuración indicando que todas las dependencias de la actividad actual han terminado
            actual->id);
 
     return 1;
 }
 
-void trim(char *cadena) {
+void trim(char *cadena) { // Función para eliminar espacios al principio y al final de una cadena
     char *inicio = cadena;
 
     // Avanza mientras haya espacios al principio
@@ -91,9 +91,9 @@ void trim(char *cadena) {
     }
 }
 
-int main(int argc, char *argv[]){
-    Actividad lista_actividades[MAX_ACTIVIDADES];
-    int total_actividades = 0;
+int main(int argc, char *argv[]){ // Función principal del programa, recibe los argumentos de línea de comandos
+    Actividad lista_actividades[MAX_ACTIVIDADES]; // Arreglo para almacenar las actividades leídas del archivo
+    int total_actividades = 0; // Contador de actividades leídas
     
     // Verifica que se proporcionen los argumentos necesarios
     if (argc < 3) { // Se espera al menos 2 argumentos: archivo de plan y K
@@ -117,34 +117,36 @@ int main(int argc, char *argv[]){
         buffer[strcspn(buffer, "\r\n")] = 0; // Elimina el salto de línea al final de la línea leída
 
         printf("Linea leida: %s\n", buffer); // Muestra la línea leída para depuración
-
-        char* id_actividad = strtok(buffer, ":");
+        
+        // Divide la línea en partes usando ":" como delimitador
+        char* id_actividad = strtok(buffer, ":"); 
         char* nombre_actividad = strtok(NULL, ":");
         char* tiempo_str = strtok(NULL, ":");
 
+        // Elimina espacios al principio y al final de cada parte
         trim(id_actividad);
         trim(nombre_actividad);
         trim(tiempo_str);
 
-        int tiempo_ms;
+        int tiempo_ms; // Variable para almacenar el tiempo en milisegundos
         
         if (tiempo_str == NULL || tiempo_str[0] == '\0') { // por si es null o 0
-            tiempo_ms = rand() % 4901 + 100;
-        } else {
-            tiempo_ms = atoi(tiempo_str);
+            tiempo_ms = rand() % 4901 + 100; // Genera un tiempo aleatorio entre 100 y 5000 ms si no se proporciona un tiempo específico
+        } else { // Si se proporciona un tiempo específico
+            tiempo_ms = atoi(tiempo_str); // Convierte la cadena de tiempo a un entero
         }
 
         char* dependencias_str = strtok(NULL, ":"); // formato: 1,2,3...
-        if (dependencias_str != NULL) {
+        if (dependencias_str != NULL) { // Si hay dependencias, elimina espacios al principio y al final
             trim(dependencias_str);
         }
         
         char dependencias[50][50];
         int num_dependencias = 0;
 
-        if (dependencias_str != NULL && dependencias_str[0] != '\n' && dependencias_str[0] != '\0') {
-            char* dep = strtok(dependencias_str, ","); 
-            while (dep != NULL) {
+        if (dependencias_str != NULL && dependencias_str[0] != '\n' && dependencias_str[0] != '\0') { // Si hay dependencias, las divide usando "," como delimitador
+            char* dep = strtok(dependencias_str, ",");  // Divide las dependencias en partes usando "," como delimitador
+            while (dep != NULL) { // Mientras haya dependencias, elimina espacios al principio y al final de cada dependencia y las almacena en el arreglo de dependencias
                 strcpy(dependencias[num_dependencias], dep);
                 num_dependencias++;
                 dep = strtok(NULL, ","); 
@@ -180,11 +182,8 @@ int main(int argc, char *argv[]){
        total_actividades,
        procesos_activos);
 
-        /*
-        * PRIMERA PARTE:
-        * Buscar actividades que puedan comenzar.
-        */
-        for (int i = 0; i < total_actividades; i++) {
+        // PRIMERA PARTE:
+        for (int i = 0; i < total_actividades; i++) { // Itera sobre todas las actividades para verificar cuáles pueden ejecutarse
 
             // Si ya está terminada o ejecutándose, la ignoramos.
             if (lista_actividades[i].estado != 0) {
@@ -207,7 +206,7 @@ int main(int argc, char *argv[]){
                             total_actividades,
                             i)) {
 
-            printf("[DEBUG] Actividad %s NO puede ejecutarse. Dependencias pendientes.\n",
+            printf("[DEBUG] Actividad %s NO puede ejecutarse. Dependencias pendientes.\n", // Muestra un mensaje de depuración indicando que la actividad no puede ejecutarse debido a dependencias pendientes
                 lista_actividades[i].id);
 
                 continue;
@@ -219,8 +218,8 @@ int main(int argc, char *argv[]){
             * La actividad está lista y existe espacio
             * dentro del límite de concurrencia.
             */
-           printf("[DEBUG] Intentando crear proceso para actividad %s...\n",
-            lista_actividades[i].id);
+            printf("[DEBUG] Intentando crear proceso para actividad %s...\n", // Muestra un mensaje de depuración indicando que se intentará crear un proceso para la actividad
+            lista_actividades[i].id); // Muestra el ID de la actividad
             pid_t pid = fork();
 
             if (pid < 0) {
