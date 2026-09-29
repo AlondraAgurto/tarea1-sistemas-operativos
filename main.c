@@ -11,15 +11,16 @@
 #define MAX_ACTIVIDADES 10000 // Soporta hasta 1000 actividades según la rúbrica
 #define MAX_DEPENDENCIAS 50
 
-typedef struct {
+typedef struct { // Estructura que representa una actividad en el planificador
     char id[50];
     char nombre[100];
     int tiempo_ms;
     char dependencias[50][50];
     int num_dependencias;
     int estado; // 0 = pendiente, 1 = corriendo, 2 = terminado
-    pid_t pid; // PID del proceso que ejecuta esta actividad
-    int pipe_fd[2];
+    pid_t pid; 
+    int pipe_c2p[2]; // Pipe para comunicación del hijo al padre
+    int pipe_p2c[2]; // Pipe para comunicación del padre al hijo
 } Actividad;
 
 int buscar_actividad(Actividad lista[], int total, const char *id) { // Busca la actividad por ID y devuelve su índice, o -1 si no se encuentra
@@ -117,78 +118,92 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
     // fopen para abrir
     // *archivo es un puntero
     FILE *archivo = fopen(argv[1], "r");
+    if (archivo == NULL) {
+        perror("Error al abrir el archivo");
+        return 1;
+    }
 
-    char buffer[256]; // arreglo caracteres
+    char *linea = NULL;
+    size_t cap_linea = 0;
 
-    while (fgets(buffer, sizeof(buffer), archivo) != NULL) {
-        buffer[strcspn(buffer, "\r\n")] = 0; // Elimina el salto de línea al final de la línea leída
+    while (getline(&linea, &cap_linea, archivo) != -1) {
+        linea[strcspn(linea, "\r\n")] = '\0';
+        trim(linea);
 
-        printf("Linea leida: %s\n", buffer); // Muestra la línea leída para depuración
-        
-        // Divide la línea en partes usando ":" como delimitador
-        char* id_actividad = strtok(buffer, ":"); 
-        char* nombre_actividad = strtok(NULL, ":");
-        char* tiempo_str = strtok(NULL, ":");
+        if (linea[0] == '\0' || linea[0] == '#') {
+            continue; // Ignorar líneas vacías o comentarios
+        }
 
-        // Elimina espacios al principio y al final de cada parte
+        // Copiamos la línea a un buffer temporal para no romper el original con strtok
+        char buffer_copia[512];
+        snprintf(buffer_copia, sizeof(buffer_copia), "%s", linea);
+
+        char *id_actividad = strtok(buffer_copia, ":");
+        char *nombre_actividad = strtok(NULL, ":");
+        char *tiempo_str = strtok(NULL, ":");
+        char *dependencias_str = strtok(NULL, ":");
+
+        if (!id_actividad || !nombre_actividad) continue;
+
         trim(id_actividad);
         trim(nombre_actividad);
-        trim(tiempo_str);
 
-        int tiempo_ms; // Variable para almacenar el tiempo en milisegundos
-        
-        if (tiempo_str == NULL || tiempo_str[0] == '\0') { // por si es null o 0
-            tiempo_ms = rand() % 4901 + 100; // Genera un tiempo aleatorio entre 100 y 5000 ms si no se proporciona un tiempo específico
-        } else { // Si se proporciona un tiempo específico
-            tiempo_ms = atoi(tiempo_str); // Convierte la cadena de tiempo a un entero
+        int tiempo_ms;
+        if (!tiempo_str || tiempo_str[0] == '\0') {
+            tiempo_ms = rand() % 4901 + 100;
+        } else {
+            trim(tiempo_str);
+            tiempo_ms = atoi(tiempo_str);
         }
 
-        char* dependencias_str = strtok(NULL, ":"); // formato: 1,2,3...
-        if (dependencias_str != NULL) { // Si hay dependencias, elimina espacios al principio y al final
-            trim(dependencias_str);
-        }
-        
         char dependencias[50][50];
         int num_dependencias = 0;
 
-        if (dependencias_str != NULL && dependencias_str[0] != '\n' && dependencias_str[0] != '\0') { // Si hay dependencias, las divide usando "," como delimitador
-            char* dep = strtok(dependencias_str, ",");  // Divide las dependencias en partes usando "," como delimitador
-            while (dep != NULL) { // Mientras haya dependencias, elimina espacios al principio y al final de cada dependencia y las almacena en el arreglo de dependencias
-                strcpy(dependencias[num_dependencias], dep);
-                num_dependencias++;
-                dep = strtok(NULL, ","); 
+        if (dependencias_str != NULL) {
+            trim(dependencias_str);
+            // Limpiar corchetes si vienen como [1,2]
+            for (char *p = dependencias_str; *p; p++) {
+                if (*p == '[' || *p == ']') *p = ' ';
+            }
+            trim(dependencias_str);
+
+            char *dep = strtok(dependencias_str, ",");
+            while (dep != NULL && num_dependencias < 50) {
+                trim(dep);
+                if (dep[0] != '\0') {
+                    strcpy(dependencias[num_dependencias], dep);
+                    num_dependencias++;
+                }
+                dep = strtok(NULL, ",");
             }
         }
 
-        printf("ID: %s | Nombre: %s | Tiempo: %d | Num Dependencias: %d\n", id_actividad, nombre_actividad, tiempo_ms, num_dependencias);
-        // Guardar actividad en la lista
-        // Guardar actividad en la lista
-        strcpy(lista_actividades[total_actividades].id, id_actividad); 
-        strcpy(lista_actividades[total_actividades].nombre, nombre_actividad); 
-        lista_actividades[total_actividades].tiempo_ms = tiempo_ms; 
-        lista_actividades[total_actividades].num_dependencias = num_dependencias; 
-        lista_actividades[total_actividades].estado = 0; 
+        // Guardar en la lista (manteniendo tu lógica de realloc)
+        strcpy(lista_actividades[total_actividades].id, id_actividad);
+        strcpy(lista_actividades[total_actividades].nombre, nombre_actividad);
+        lista_actividades[total_actividades].tiempo_ms = tiempo_ms;
+        lista_actividades[total_actividades].num_dependencias = num_dependencias;
+        lista_actividades[total_actividades].estado = 0;
 
-        // Copia dependencias a la estructura
         for (int i = 0; i < num_dependencias; i++) {
             strcpy(lista_actividades[total_actividades].dependencias[i], dependencias[i]);
         }
 
         total_actividades++;
 
-        // Por si el espacio x.x
-        if (total_actividades >= capacidad_actividades) { 
+        if (total_actividades >= capacidad_actividades) {
             capacidad_actividades *= 2;
-            Actividad *temp = realloc(lista_actividades, capacidad_actividades * sizeof(Actividad)); 
+            Actividad *temp = realloc(lista_actividades, capacidad_actividades * sizeof(Actividad));
             if (temp == NULL) {
-                perror("Error al redimensionar memoria");
-                free(lista_actividades);
+                perror("Error al reasignar memoria");
+                free(linea);
                 fclose(archivo);
                 return 1;
             }
             lista_actividades = temp;
         }
     }
+    free(linea);
     
     printf("────୨ৎ────────\n");
     printf("\n⡞⠳⣄⣀⣠⠞INICIANDO SIMULACION DE PROCESOS \n");
@@ -242,10 +257,11 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
             printf("[DEBUG] Intentando crear proceso para actividad %s...\n", // Muestra un mensaje de depuración indicando que se intentará crear un proceso para la actividad
             lista_actividades[i].id);// Muestra el ID de la actividad
 
-            if (pipe(lista_actividades[i].pipe_fd) < 0) { // Crea un pipe para la actividad actual y verifica si hubo un error al crearlo
-                perror("Error al crear el pipe");
+            if (pipe(lista_actividades[i].pipe_c2p) < 0 || pipe(lista_actividades[i].pipe_p2c) < 0) {
+                perror("Error al crear los pipes");
                 exit(1);
-            } 
+            }
+
             pid_t pid = fork();
 
             if (pid < 0) {
@@ -261,35 +277,28 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
                 * El hijo se encarga de simular la ejecución
                 * de la actividad.
                 */
-                close(lista_actividades[i].pipe_fd[0]); // Cierra el extremo de lectura del pipe en el proceso hijo
+                close(lista_actividades[i].pipe_c2p[0]); // Cierra lectura p2c si no se usa
+                close(lista_actividades[i].pipe_p2c[1]); // Cierra escritura p2c si no se usa
 
-                printf(
-                    "  [Hijo] Actividad %s (%s) iniciada "
-                    "(PID: %d). Duración: %d ms\n",
+                printf("  [Hijo] Actividad %s (%s) iniciada (PID: %d). Duración: %d ms\n",
                     lista_actividades[i].id,
                     lista_actividades[i].nombre,
                     getpid(),
-                    lista_actividades[i].tiempo_ms
-                );
+                    lista_actividades[i].tiempo_ms);
 
-                // Simula el tiempo de ejecución de la actividad.
+                // Simula el tiempo de ejecución
                 usleep(lista_actividades[i].tiempo_ms * 1000);
 
-                // Envía un mensaje al proceso padre indicando que la actividad ha terminado.
-                char mensaje[100]; // Buffer para el mensaje que se enviará al proceso padre
-                snprintf(mensaje, sizeof(mensaje), "Insumo de [%s] listo", lista_actividades[i].id); // Crea un mensaje indicando que la actividad ha terminado
-                write(lista_actividades[i].pipe_fd[1], mensaje, strlen(mensaje) + 1); // Escribe el mensaje en el pipe para que el proceso padre lo reciba
-                close(lista_actividades[i].pipe_fd[1]); // Cierra escritura
+                // Prepara y envía el mensaje de término al padre
+                char mensaje[100];
+                snprintf(mensaje, sizeof(mensaje), "Insumo de [%s] listo", lista_actividades[i].id);
+                write(lista_actividades[i].pipe_c2p[1], mensaje, strlen(mensaje) + 1);
+                close(lista_actividades[i].pipe_c2p[1]); // Cierra escritura tras enviar
 
-                printf( //  Muestra un mensaje indicando que la actividad ha finalizadooo
-                    "  [Hijo] Actividad %s finalizada "
-                    "(PID: %d)\n",
+                printf("  [Hijo] Actividad %s finalizada (PID: %d)\n",
                     lista_actividades[i].id,
-                    getpid()
-                );
+                    getpid());
 
-                // El hijo termina para no continuar ejecutando
-                // el planificador del proceso padre.
                 exit(0);
 
             } else {
@@ -301,7 +310,9 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
                 * de la actividad.
                 */
 
-                close(lista_actividades[i].pipe_fd[1]); // Cierra el extremo de escritura del pipe en el proceso padre
+                close(lista_actividades[i].pipe_c2p[1]); // Cierra escritura en padre
+                close(lista_actividades[i].pipe_p2c[0]); // Cierra lectura del pipe padre->hijo si no lo usas
+                close(lista_actividades[i].pipe_p2c[1]); // Cierra el extremo de escritura del pipe en el proceso padre
 
                 lista_actividades[i].pid = pid;
                 lista_actividades[i].estado = 1;
@@ -354,11 +365,11 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
 
                     // Leemos el mensaje del pipe del hijo
                     char buffer_pipe[100]; // Buffer para almacenar el mensaje recibido del proceso hijo
-                    ssize_t bytes_leidos = read(lista_actividades[i].pipe_fd[0], buffer_pipe, sizeof(buffer_pipe)); // Leemos el mensaje del pipe del hijo y almacenamos el número de bytes leídos
-                    if (bytes_leidos > 0) { // Si se leyeron bytes del pipe, mostramos el mensaje recibido
+                    ssize_t bytes_leidos = read(lista_actividades[i].pipe_c2p[0], buffer_pipe, sizeof(buffer_pipe));
+                    if (bytes_leidos > 0) {
                         printf("  [Padre] Mensaje recibido -> %s\n", buffer_pipe);
                     }
-                    close(lista_actividades[i].pipe_fd[0]); // Cierra lectura
+                    close(lista_actividades[i].pipe_c2p[0]); // Cierra lectura
 
                     printf( // Muestra un mensaje indicando que la actividad ha terminado y el número de procesos activos y actividades terminadas
                         "  [Padre] Actividad %s terminó. "
@@ -379,7 +390,7 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
     
     printf("⡞⠳⣄⣀⣠⠞SIMULACION FINALIZADA⡞⠳⣄⣀⣠⠞\n");
 
-    // relleno xd
+    free(lista_actividades);
     fclose(archivo);
     return 0;
 }
