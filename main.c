@@ -21,6 +21,7 @@ typedef struct { // Estructura que representa una actividad en el planificador
     pid_t pid; 
     int pipe_c2p[2]; // Pipe para comunicación del hijo al padre
     int pipe_p2c[2]; // Pipe para comunicación del padre al hijo
+    char mensaje[100]; // Mensaje que el hijo enviará al padre al terminar
 } Actividad;
 
 int buscar_actividad(Actividad lista[], int total, const char *id) { // Busca la actividad por ID y devuelve su índice, o -1 si no se encuentra
@@ -232,12 +233,6 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
                 break;
             }
 
-            // Revisamos si todas sus dependencias terminaron.
-          /*  if (!dependencias_terminadas(lista_actividades,
-                                        total_actividades,
-                                        i)) {
-                continue;
-            } */
             if (!dependencias_terminadas(lista_actividades,
                             total_actividades,
                             i)) {
@@ -280,6 +275,14 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
                 close(lista_actividades[i].pipe_c2p[0]); // Cierra lectura p2c si no se usa
                 close(lista_actividades[i].pipe_p2c[1]); // Cierra escritura p2c si no se usa
 
+                char buffer_insumos[512];
+                ssize_t r = read(lista_actividades[i].pipe_p2c[0], buffer_insumos, sizeof(buffer_insumos) - 1);
+                if (r > 0) {
+                    buffer_insumos[r] = '\0';
+                    printf("  [Hijo] Actividad %s recibió insumos:\n%s", lista_actividades[i].id, buffer_insumos);
+                }
+                close(lista_actividades[i].pipe_p2c[0]);
+
                 printf("  [Hijo] Actividad %s (%s) iniciada (PID: %d). Duración: %d ms\n",
                     lista_actividades[i].id,
                     lista_actividades[i].nombre,
@@ -312,6 +315,15 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
 
                 close(lista_actividades[i].pipe_c2p[1]); // Cierra escritura en padre
                 close(lista_actividades[i].pipe_p2c[0]); // Cierra lectura del pipe padre->hijo si no lo usas
+                
+                for (int d = 0; d < lista_actividades[i].num_dependencias; d++) {
+                    int pos_dep = buscar_actividad(lista_actividades, total_actividades, lista_actividades[i].dependencias[d]);
+                    if (pos_dep != -1) {
+                        write(lista_actividades[i].pipe_p2c[1], lista_actividades[pos_dep].mensaje, strlen(lista_actividades[pos_dep].mensaje));
+                        write(lista_actividades[i].pipe_p2c[1], "\n", 1);
+                    }
+                }
+
                 close(lista_actividades[i].pipe_p2c[1]); // Cierra el extremo de escritura del pipe en el proceso padre
 
                 lista_actividades[i].pid = pid;
@@ -363,11 +375,13 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
                     procesos_activos--;  // Decrementamos el contador de procesos activos
                     actividades_terminadas++; // Incrementamos el contador de actividades terminadas
 
-                    // Leemos el mensaje del pipe del hijo
-                    char buffer_pipe[100]; // Buffer para almacenar el mensaje recibido del proceso hijo
-                    ssize_t bytes_leidos = read(lista_actividades[i].pipe_c2p[0], buffer_pipe, sizeof(buffer_pipe));
+                    // Leemos el mensaje del pipe del hijo y lo guardamos en la estructura
+                    ssize_t bytes_leidos = read(lista_actividades[i].pipe_c2p[0], lista_actividades[i].mensaje, sizeof(lista_actividades[i].mensaje) - 1);
                     if (bytes_leidos > 0) {
-                        printf("  [Padre] Mensaje recibido -> %s\n", buffer_pipe);
+                        lista_actividades[i].mensaje[bytes_leidos] = '\0';
+                        printf("  [Padre] Mensaje recibido -> %s\n", lista_actividades[i].mensaje);
+                    } else {
+                        snprintf(lista_actividades[i].mensaje, sizeof(lista_actividades[i].mensaje), "Insumo de [%s] listo", lista_actividades[i].id);
                     }
                     close(lista_actividades[i].pipe_c2p[0]); // Cierra lectura
 
@@ -385,6 +399,10 @@ int main(int argc, char *argv[]){ // Función principal del programa, recibe los
             printf("[DEBUG] waitpid termino. Actividades terminadas: %d/%d\n",
             actividades_terminadas,
             total_actividades);
+        } else {
+            // Protección contra bloqueos si no hay procesos activos ni terminados pero falta avanzar
+            printf("  [Padre] ERROR: No hay procesos activos y quedan actividades sin resolver.\n");
+            break;
         }
     }
     
