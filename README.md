@@ -27,7 +27,7 @@ Por ejemplo: ./planificador plan.txt 3
   5. Manejo de señales y errores:
     * Si se presiona Ctrl+C (SIGINT), el programa intercepta la señal para detener todas las actividades de forma ordenada.
     * Si una tarea falla, el programa aísla el error y detiene únicamente la rama de dependencias afectada sin cerrar todo el simulador.
-Decisiones de diseño:
+## Decisiones de diseño:
   1. Uso de procesos en vez de hilos: Como lo exigía el enunciado, se trabajó únicamente con procesos (fork) y no con hilos. Esto evita problemas de memoria compartida y asegura que cada tarea funcione de forma aislada.
   2. Evitar espera activa: Para no gastar recursos de CPU innecesarios mientras se espera que se liberen cupos del límite $K$, el programa se apoya en el bloqueo natural de las lecturas en las tuberías y la espera de procesos.
   3. Comunicación por tuberías: Se eligieron los pipes porque permiten enviar mensajes directos y sencillos entre los procesos que tienen relación de dependencia, manteniendo el flujo del grafo de forma ordenada.
