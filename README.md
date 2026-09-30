@@ -1,5 +1,4 @@
-# tarea1-sistemas-operativos
-Tarea 1 Sistemas Operativos - Planificador Dieciochero
+# Tarea 1 Sistemas Operativos - Planificador Dieciochero
 
 Este repositorio contiene la primera tarea del curso de Sistemas Operativos. El programa es un simulador de actividades
 modelado como un Grafo Acrílico (DAG) ¿, desarrollado en C utilizando procesos, tuberias (pipes) y manejo de señales,
