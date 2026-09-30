@@ -1,3 +1,5 @@
+link repo: https://github.com/AlondraAgurto/tarea1-sistemas-operativos
+
 # Tarea 1 Sistemas Operativos - Planificador Dieciochero
 
 Este repositorio contiene la primera tarea del curso de Sistemas Operativos. El programa es un simulador de actividades
