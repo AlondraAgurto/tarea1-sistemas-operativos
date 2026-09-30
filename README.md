@@ -25,8 +25,8 @@ Por ejemplo: ./planificador plan.txt 3
   3. Control de concurrencia: Administra la creación de procesos hijos para asegurar que nunca haya más de $K$ actividades ejecutándose al mismo tiempo.
   4. Comunicación con pipes: Cada proceso utiliza tuberías para enviar una notificación a las actividades que dependen de él una vez que finaliza su trabajo.
   5. Manejo de señales y errores:
-    * Si se presiona Ctrl+C (SIGINT), el programa intercepta la señal para detener todas las actividades de forma ordenada.
-    * Si una tarea falla, el programa aísla el error y detiene únicamente la rama de dependencias afectada sin cerrar todo el simulador.
+      * Si se presiona Ctrl+C (SIGINT), el programa intercepta la señal para detener todas las actividades de forma ordenada.
+      * Si una tarea falla, el programa aísla el error y detiene únicamente la rama de dependencias afectada sin cerrar todo el simulador.
 ## Decisiones de diseño:
   1. Uso de procesos en vez de hilos: Como lo exigía el enunciado, se trabajó únicamente con procesos (fork) y no con hilos. Esto evita problemas de memoria compartida y asegura que cada tarea funcione de forma aislada.
   2. Evitar espera activa: Para no gastar recursos de CPU innecesarios mientras se espera que se liberen cupos del límite $K$, el programa se apoya en el bloqueo natural de las lecturas en las tuberías y la espera de procesos.
